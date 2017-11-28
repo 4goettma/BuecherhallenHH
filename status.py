@@ -12,6 +12,9 @@ def printFaellig(data, c1, c2, d1, d2, temp):
     elif(data.find("Dieses Medium kann nicht verlängert werden") != -1):
         print(Style.BRIGHT+c1+"   Fällig am      "+temp+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
         print(Style.BRIGHT+Fore.RED+"   nicht verlängerbar"+Style.RESET_ALL)
+    elif(data.find("Heute verlängert oder ausgeliehen") != -1):
+        print(Style.BRIGHT+c1+"   Fällig am      "+temp+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
+        print(Style.BRIGHT+Fore.GREEN+"   gerade verlängert ;)"+Style.RESET_ALL)
     else:
         print(Style.BRIGHT+c2+"   Fällig am      "+temp+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
 
