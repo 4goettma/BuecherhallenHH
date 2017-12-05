@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import requests, re, datetime, sys
 from colorama import init, Fore, Back, Style
 init() #Colorama
@@ -5,7 +6,6 @@ DEBUG = True
 DEBUG = False
 
 # TODO: überarbeiten mit Regex statt find(), um unbekannte Verlängerungs-Hinderungsgründe ausschließen zu könenn
-
 def printFaellig(data, c1, c2, d1, d2, temp):
     global renewCounter
     temp = temp[0]+"."+temp[1]+"."+temp[2]
@@ -162,10 +162,13 @@ def listMedia(ID, PIN):
             print(Style.BRIGHT+Fore.RED+" Achtung:\n  Ihr Kundenkonto ist derzeit gesperrt."+Style.RESET_ALL)
 
 def main():
-    for i in range(len(sys.argv)//2):
-        if (DEBUG): print(sys.argv[2*i+1], sys.argv[2*i+2])
-        listMedia(sys.argv[2*i+1], sys.argv[2*i+2])
-        print("\n\n")
+    if (len(sys.argv) <= 1 or (len(sys.argv) == 2 and sys.argv[1] == "--help")):
+        print("usage: "+sys.argv[0]+" [[Nummer der Kundenkarte] [Passwort/PIN]]\nEs können mehrere Konten mit einem Aufruf abgefragt werden, indem mehrere Zugangsdaten-Paare angegeben werden!")
+    else:
+        for i in range(len(sys.argv)//2):
+            if (DEBUG): print(sys.argv[2*i+1], sys.argv[2*i+2])
+            listMedia(sys.argv[2*i+1], sys.argv[2*i+2])
+            print("\n\n")
 
 if __name__ == "__main__":
     # execute only if run as a script
