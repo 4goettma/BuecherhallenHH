@@ -165,6 +165,7 @@ def main():
     for i in range(len(sys.argv)//2):
         if (DEBUG): print(sys.argv[2*i+1], sys.argv[2*i+2])
         listMedia(sys.argv[2*i+1], sys.argv[2*i+2])
+        print("\n\n")
 
 if __name__ == "__main__":
     # execute only if run as a script
