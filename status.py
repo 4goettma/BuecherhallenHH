@@ -120,9 +120,12 @@ def listMedia(ID, PIN):
 
     #renewCounter(Max) initialisieren
     renewCounter = 0
-    r = re.compile('([\d]+) der ([\d]+) von Ihnen entliehenen Medien können verlängert werden').findall(rawText)
-    if (len(r) > 0):
-        renewCounterMax = int(r[0][0])
+    r1 = re.compile('([\d]+) der ([\d]+) von Ihnen entliehenen Medien können verlängert werden').findall(rawText)
+    r2 = re.compile('([\d]+) der ([\d]+) von Ihnen entliehenen Medien kann verlängert werden.').findall(rawText)
+    if (len(r1) > 0):
+        renewCounterMax = int(r1[0][0])
+    elif (len(r2) > 0):
+        renewCounterMax = int(r2[0][0])
     else:
         renewCounterMax = 0
 
