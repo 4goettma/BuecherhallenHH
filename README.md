@@ -6,4 +6,4 @@ Tool, welches die Medienliste im Terminal farblich hervorgehoben und mit Warnung
 
 usage: ./status.py [[Nummer der Kundenkarte] [Passwort/PIN]]
 
-Es können mehrere Konten mit einem Aufruf abgefragt werden, indem mehrere Zugangsdaten-Paare angegeben werden!"
+Es können mehrere Konten mit einem Aufruf abgefragt werden, indem mehrere Zugangsdaten-Paare angegeben werden!
