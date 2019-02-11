@@ -31,8 +31,10 @@ class konto():
         return r1.status_code, r1.text
 
     def listLoans(self):
-        raw = self.requestStatus()[1]
-        text = raw.replace('\n', '').replace('\r', '').replace('\t', '')
+        text = self.requestStatus()[1]
+        replacements = [("\n",""),("\r",""),("\t",""),("&auml;","ä"),("&ouml;","ö"),("&uuml;","ü"),("&#40;","("),("&#41;",")"),("&nbsp;"," ")]
+        for i in replacements:
+            text = text.replace(i[0],i[1])
         while (text.find("  ") != -1):
             text = text.replace("  ", " ")
 
@@ -71,8 +73,7 @@ class konto():
             if(text.find("Ihr Kundenkonto ist derzeit gesperrt.") != -1):
                 print(Style.BRIGHT+Fore.RED+" Achtung:\n  Ihr Kundenkonto ist derzeit gesperrt."+Style.RESET_ALL)
 
-    def listLoan(self, text):        
-
+    def listLoan(self, text):
         # Titel
         r1 = re.search("<a href=\"suchergebnis-detail\/medium\/(?P<digitalId>.+?)\.html\">(?P<title>.+?)<\/a>", text)
 
@@ -109,7 +110,7 @@ class konto():
         #   in den nächsten 7 Tagen fällig:  grün
         #   sonstig fällig:                  unfarbig
 
-        r6 = re.search("F&auml;llig am <strong>(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/strong>", text)
+        r6 = re.search("Fällig am <strong>(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/strong>", text)
         d1 = datetime.datetime.now()
         d2 = datetime.datetime(int(r6.group("dateY")), int(r6.group("dateM")), int(r6.group("dateD")))
         if (((d2-d1).days+1) <= 0):
@@ -130,12 +131,15 @@ class konto():
             c2 = Fore.YELLOW
 
         if(text.find("Keine Verlängerung möglich, Medium wurde vorgemerkt") != -1):
+            # vorgemerkt
             print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   vorgemerkt"+Style.RESET_ALL)
         elif(text.find("Keine Verlängerung möglich, Verlängerungslimit erreicht") != -1 or text.find("Zweimal verlängert") != -1 or text.find("Dreimal verlängert") != -1 or text.find("Viermal verlängert") != -1): # "Viermal" noch nicht in freier Wildbahn gesehen
+            # nicht mehr verlängerbar
             print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   nicht mehr verlängerbar"+Style.RESET_ALL)
-        elif(text.find("Dieses Medium kann nicht verlängert werden") != -1):
+        elif(text.find("Dieses Medium kann nicht verlängert werden") != -1 or text.find("Medium nicht verlängerbar") != -1):
+            # nicht verlängerbar
             print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   nicht verlängerbar"+Style.RESET_ALL)
         elif(text.find("Heute verlängert oder ausgeliehen") != -1):
