@@ -130,12 +130,15 @@ class konto():
             c2 = Fore.YELLOW
 
         if(text.find("Keine Verlängerung möglich, Medium wurde vorgemerkt") != -1):
+            # vorgemerkt
             print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   vorgemerkt"+Style.RESET_ALL)
         elif(text.find("Keine Verlängerung möglich, Verlängerungslimit erreicht") != -1 or text.find("Zweimal verlängert") != -1 or text.find("Dreimal verlängert") != -1 or text.find("Viermal verlängert") != -1): # "Viermal" noch nicht in freier Wildbahn gesehen
+            # nicht mehr verlängerbar
             print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   nicht mehr verlängerbar"+Style.RESET_ALL)
-        elif(text.find("Dieses Medium kann nicht verlängert werden") != -1):
+        elif(text.find("Dieses Medium kann nicht verlängert werden") != -1 or text.find("Medium nicht verlängerbar") != -1):
+            # nicht verlängerbar
             print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   nicht verlängerbar"+Style.RESET_ALL)
         elif(text.find("Heute verlängert oder ausgeliehen") != -1):
