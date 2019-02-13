@@ -90,10 +90,10 @@ class konto():
             print("   Autor:")
 
         # Medienart
-        r4 = re.search("<p class=\"loans-media-type-text\">(?P<type>.*?)<\/p>", text)
-        if (len(re.findall("<p class=\"loans-media-type-text\">.*?<\/p>", text))):
+        r4 = re.search("<span class=\"loans-media-type-text\">(?P<type>.*?)<\/span>", text)
+        if (len(re.findall("<span class=\"loans-media-type-text\">.*?<\/span>", text))):
             if (r4.group("type") in ["Bestseller", "Blu-Ray-Disk", "DVD"]):
-                print("   Typ:",Style.BRIGHT+Fore.BLUE+r[0]+Style.RESET_ALL)
+                print("   Typ:",Style.BRIGHT+Fore.BLUE+r4.group("type")+Style.RESET_ALL)
             else:
                 print("   Typ:",r4.group("type"))
         else:
