@@ -130,7 +130,7 @@ class konto():
             c1 = Fore.YELLOW
             c2 = Fore.YELLOW
 
-        if(text.find("Keine Verlängerung möglich, Medium wurde vorgemerkt") != -1):
+        if(text.find("Keine Verlängerung möglich, Medium wurde vorgemerkt") != -1 or text.find("Medium vorgemerkt") != -1):
             # vorgemerkt
             print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   vorgemerkt"+Style.RESET_ALL)
