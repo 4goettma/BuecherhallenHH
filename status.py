@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import datetime, re, requests, sys
-from colorama import init, Fore, Back, Style
-init() #Colorama
+from colorama import Fore, Back, Style
 
 class settings:
     printEmptyItems = False
