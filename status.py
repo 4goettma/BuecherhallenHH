@@ -3,7 +3,11 @@ import datetime, re, requests, sys
 from colorama import init, Fore, Back, Style
 init() #Colorama
 
-class konto():
+class settings:
+    printEmptyItems = False
+    printAccountStatus = True
+
+class konto:
     def __init__(self, ID, PIN):
         self.userid  = ID
         self.userpw  = PIN
@@ -60,11 +64,12 @@ class konto():
         if(len(entries) != int(r2.group("infoMedienanzahl"))):
             self.abort()
         else:
-            # print general information
-            print("   Vormerkguthaben:",r2.group("infoGuthaben"))
-            print("   Vormerkungen:   ",r2.group("infoVormerkungen"))
-            print("   Kontostand:     ",r2.group("infoKontostand"))
-            print("")
+            if(settings.printAccountStatus):
+                # print general information
+                print("   Vormerkungen:   ",r2.group("infoVormerkungen"))
+                print("   Vormerkguthaben:",r2.group("infoGuthaben"))
+                print("   Kontostand:     ",r2.group("infoKontostand"))
+                print("")
             print(" "+r2.group("infoMedienanzahl")+" Medien ausgeliehen:\n")
             for entry in entries:
                 self.listLoan(entry)
@@ -83,21 +88,21 @@ class konto():
         print(Style.BRIGHT+Fore.WHITE+" "+r1.group("title")+" ("+r2.group("mediumId")+")"+Style.RESET_ALL)
         
         # Autor
-        r3 = re.search("<p class=\"loans-author\">(?P<author>.*?)<\/p>", text)
+        r3 = re.search("<p class=\"loans-author\">\ ?(?P<author>.*?)<\/p>", text)
         if (len(re.findall("<p class=\"loans-author\">.*?<\/p>", text))):
-            print("   Autor: ", r3.group("author"))
-        else:
-            print("   Autor:")
+            print("   Autor         ", r3.group("author"))
+        elif(settings.printEmptyItems):
+            print("   Autor")
 
         # Medienart
         r4 = re.search("<span class=\"loans-media-type-text\">(?P<type>.*?)<\/span>", text)
         if (len(re.findall("<span class=\"loans-media-type-text\">.*?<\/span>", text))):
             if (r4.group("type") in ["Bestseller", "Blu-Ray-Disk", "DVD"]):
-                print("   Typ:",Style.BRIGHT+Fore.BLUE+r4.group("type")+Style.RESET_ALL)
+                print("   Typ           ",Style.BRIGHT+Fore.BLUE+r4.group("type")+Style.RESET_ALL)
             else:
-                print("   Typ:",r4.group("type"))
-        else:
-            print("   Typ:")
+                print("   Typ           ",r4.group("type"))
+        elif(printEmptyItems):
+            print("   Typ")
 
         # Ausleihdatum
         r5 = re.search("Ausgeliehen am:<\/strong><\/span> <span class=\"loans-details-value\">(?P<date>.*?)<\/span> <br> <span class=\"loans-details-label\"><strong>Standort:<\/strong><\/span> <span class=\"loans-details-value\">(?P<location>.*?)<\/span>", text)
