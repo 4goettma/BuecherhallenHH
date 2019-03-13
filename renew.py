@@ -7,6 +7,7 @@ class settings:
     renewWhenDaysLeft = 0
     # requires python module "readchar" to be installed
     useReadchar = True
+    skipRenewConfirm = False
 
 if (settings.useReadchar):
     import readchar
@@ -124,21 +125,24 @@ class konto:
             print(Style.BRIGHT+c2+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             self.renewableCounter += 1
             if((d2-d1).days <= settings.renewWhenDaysLeft):
-                if (settings.useReadchar):
-                    choice = ""
-                    while(choice not in ["\r","Y","y","N","n","\x03"]):
-                        print(Style.BRIGHT+Fore.WHITE+"   try to renew? [Y/n] "+Style.RESET_ALL, end="", flush=True)
-                        choice = readchar.readchar()
-                    print(choice)
-                    if(choice in ["\r","Y","y"]):
-                        self.requestRenewMedium(r2.group("mediumId"))
-                    if(choice == "\x03"):
-                        print(Style.BRIGHT+Fore.RED+"\n   Aborting..."+Style.RESET_ALL)
-                        exit(0)
+                if (not settings.skipRenewConfirm and "--skip-confirm" not in sys.argv):
+                    if (settings.useReadchar):
+                        choice = ""
+                        while(choice not in ["\r","Y","y","N","n","\x03"]):
+                            print(Style.BRIGHT+Fore.WHITE+"   try to renew? [Y/n] "+Style.RESET_ALL, end="", flush=True)
+                            choice = readchar.readchar()
+                        print(choice)
+                        if(choice in ["\r","Y","y"]):
+                            self.requestRenewMedium(r2.group("mediumId"))
+                        if(choice == "\x03"):
+                            print(Style.BRIGHT+Fore.RED+"\n   Aborting..."+Style.RESET_ALL)
+                            exit(0)
+                    else:
+                        choice = input("try to renew? [Y/n]")
+                        if(choice in ["","Y","y"]):
+                            self.requestRenewMedium(r2.group("mediumId"))
                 else:
-                    choice = input("try to renew? [Y/n]")
-                    if(choice in ["","Y","y"]):
-                        self.requestRenewMedium(r2.group("mediumId"))
+                    self.requestRenewMedium(r2.group("mediumId"))
             else:
                 print("   Skipped according to configuration (renewWhenDaysLeft)")
                 
@@ -158,13 +162,22 @@ class konto:
         print("Alle Angeben ohne Gewähr!")
 
 def main():
-    if (len(sys.argv) <= 1 or (len(sys.argv) == 2 and sys.argv[1] == "--help")):
-        print("usage: "+sys.argv[0]+" [[Nummer der Kundenkarte] [Passwort/PIN]]\nEs können mehrere Konten mit einem Aufruf bearbeitet werden, indem mehrere Zugangsdaten-Paare angegeben werden!")
+    if (len(sys.argv) <= 1 or "--help" in sys.argv):
+        print("usage: ./"+sys.argv[0]+" [[Nummer der Kundenkarte] [Passwort/PIN]]+")
+        print("Es können mehrere Konten mit einem Aufruf bearbeitet werden, indem mehrere Zugangsdaten-Paare angegeben werden!")
+        print("")
+        print("Optionen:")
+        print("  --help           Diese Gebrauchsanweisung anzeigen.")
+        print("  --skip-confirm  Verlängerung nicht vom Nutzer bestätigen lassen. Für automatisierten Einsatz per Skript gedacht.")
     else:
-        for i in range(len(sys.argv)//2):
-            id = konto(sys.argv[2*i+1], sys.argv[2*i+2])
+        arguments = sys.argv[1:]
+        for i in ["--help","--skip-confirm"]:
+            if(i in arguments):
+                arguments.remove(i)
+        for i in range(len(arguments)//2):
+            id = konto(arguments[2*i], arguments[2*i+1])
             id.listLoans()
-            if (len(sys.argv)//2 != 1):
+            if (len(arguments)//2 != 1):
                 print("\n\n")
 
 if __name__ == "__main__":
