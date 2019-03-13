@@ -22,7 +22,7 @@ class konto:
 
     def abort(self):
         print(Style.BRIGHT+Fore.RED+" Fehler beim Parsen, bitte manuell überprüfen!"+Style.RESET_ALL)
-        exit(0)
+        exit(1)
 
     def requestStatus(self):
         r1 = requests.post("https://www.buecherhallen.de/login.html",
