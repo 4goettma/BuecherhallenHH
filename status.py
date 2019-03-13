@@ -65,10 +65,12 @@ class konto:
         else:
             if(settings.printAccountStatus):
                 # print general information
-                print("   Vormerkungen:   ",r2.group("infoVormerkungen"))
-                print("   Vormerkguthaben:",r2.group("infoGuthaben"))
-                print("   Kontostand:     ",r2.group("infoKontostand"))
+                l1,l2,l3 = len(r2.group("infoVormerkungen")), len(r2.group("infoGuthaben")), len(r2.group("infoKontostand"))
+                print("   Vormerkungen:   "," "*(max(l1,l2,l3)-l1-5),r2.group("infoVormerkungen"))
+                print("   Vormerkguthaben:"," "*(max(l1,l2,l3)-l2)  ,r2.group("infoGuthaben"))
+                print("   Kontostand:     "," "*(max(l1,l2,l3)-l3)  ,r2.group("infoKontostand"))
                 print("")
+                
             print(" "+r2.group("infoMedienanzahl")+" Medien ausgeliehen:\n")
             for entry in entries:
                 self.listLoan(entry)
