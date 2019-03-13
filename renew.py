@@ -47,9 +47,11 @@ class konto:
         while (text.find("  ") != -1):
             text = text.replace("  ", " ")
 
-        if(text.find("Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.") != -1):
-            print(" Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.\n")
-            abort()
+        errorMessages = ["Ihr Kundenkonto wurde aus Sicherheitsgründen deaktiviert. Bitte wenden Sie sich an das Bibliothekspersonal.", "Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal."]
+        for i in errorMessages:
+            if(text.find(i) != -1):
+                print(" "+i+"\n")
+                self.abort()
         
         entries = re.findall("<li class=\"loans-item\">(?P<name>.+?)<\/li>", text)
         
