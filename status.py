@@ -158,20 +158,6 @@ class konto:
 
         print("")
 
-    """
-    def requestRenewMedium(self, itemId, token, cookies):
-        r1 = requests.post("https://www.buecherhallen.de/entliehene-medien.html",
-                           data   ={'FORM_SUBMIT':   'tl_renewal_action',
-                                    'REQUEST_TOKEN': token,
-                                    'actionType': 'renewItem',
-                                    'itemId': itemId},
-                           cookies=cookies)
-        if (r1.status_code == 200):
-            print("Verlängern von Medium mit ID",itemId,"erfolgreich!")
-        else:
-            print("Verlängern von Medium mit ID",itemId," fehlgeschlagen!")
-    """
-
 def main():
     if (len(sys.argv) <= 1 or (len(sys.argv) == 2 and sys.argv[1] == "--help")):
         print("usage: "+sys.argv[0]+" [[Nummer der Kundenkarte] [Passwort/PIN]]\nEs können mehrere Konten mit einem Aufruf abgefragt werden, indem mehrere Zugangsdaten-Paare angegeben werden!")
