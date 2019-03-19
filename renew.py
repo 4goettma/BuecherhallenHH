@@ -129,7 +129,7 @@ class konto:
             print(Style.BRIGHT+Fore.WHITE+" "+r1.group("title")+" ("+r2.group("mediumId")+")"+Style.RESET_ALL)
             print(Style.BRIGHT+c2+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             self.renewableCounter += 1
-            if((d2-d1).days <= settings.renewWhenDaysLeft):
+            if((d2-d1).days < settings.renewWhenDaysLeft): # <= produziert fehlerhaftes Verhalten, abklären!
                 if (not settings.skipRenewConfirm and "--skip-confirm" not in sys.argv):
                     if (settings.useReadchar):
                         choice = ""
