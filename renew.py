@@ -158,10 +158,10 @@ class konto:
                                     'itemId': itemId},
                            cookies=self.cookies)
         if (r1.status_code == 200):
-            print(Fore.GREEN+"Verlängerung von Medium mit ID",itemId," wahrscheinlich erfolgreich!"+Style.RESET_ALL)
+            print(Fore.GREEN+"   Verlängerung von Medium mit ID",itemId,"wahrscheinlich erfolgreich!"+Style.RESET_ALL)
         else:
-            print(Fore.RED+"Verlängerung von Medium mit ID",itemId,"fehlgeschlagen!"+Style.RESET_ALL)
-        print("Alle Angeben ohne Gewähr!")
+            print(Fore.RED+"   Verlängerung von Medium mit ID",itemId,"fehlgeschlagen!"+Style.RESET_ALL)
+        print("   Alle Angeben ohne Gewähr!")
 
 def main():
     if (len(sys.argv) <= 1 or "--help" in sys.argv):
