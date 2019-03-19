@@ -23,6 +23,7 @@ class konto:
         self.renewableCounterMax = 0
 
         r1 = requests.get("https://www.buecherhallen.de/login.html")
+        # save first cookies (PHPSESSID)
         self.cookies = r1.cookies
         self.token   = re.search("name=\"REQUEST_TOKEN\" value=\"(?P<token>.+?)\"", r1.text).group("token")
 
@@ -37,6 +38,8 @@ class konto:
                                     'username':      self.userid,
                                     'password':      self.userpw},
                            cookies=self.cookies)
+        # during authentification, some more cookies will be created (FE_USER_AUTH, PHPSESSID)
+        self.cookies = r1.cookies
         return r1.status_code, r1.text
 
     def listLoans(self):
