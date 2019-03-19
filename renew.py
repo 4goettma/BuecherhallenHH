@@ -157,8 +157,8 @@ class konto:
         r1 = requests.post("https://www.buecherhallen.de/entliehene-medien.html",
                            data   ={'FORM_SUBMIT':   'tl_renewal_action',
                                     'REQUEST_TOKEN': self.token,
-                                    'actionType': 'renewItem',
-                                    'itemId': itemId},
+                                    'actionType':    'renewItem',
+                                    'itemId':        itemId},
                            cookies=self.cookies)
         if (r1.status_code == 200):
             print(Fore.GREEN+"   Verlängerung von Medium mit ID",itemId,"wahrscheinlich erfolgreich!"+Style.RESET_ALL)
