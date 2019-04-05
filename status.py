@@ -2,7 +2,7 @@
 import datetime, re, requests, sys
 
 class settings:
-    printEmptyItems      = False
+    printUndefinedValues = False
     printAccountStatus   = True
     useColorHighlighting = False
     showWeekday          = True
@@ -101,7 +101,7 @@ class konto:
         r3 = re.search("<p class=\"loans-author\">\ ?(?P<author>.*?)<\/p>", text)
         if (len(re.findall("<p class=\"loans-author\">.*?<\/p>", text))):
             print("   Autor         ", r3.group("author"))
-        elif(settings.printEmptyItems):
+        elif(settings.printUndefinedValues):
             print("   Autor")
 
         # Medienart
@@ -111,7 +111,7 @@ class konto:
                 print("   Typ           ",self.color["Style.BRIGHT"]+self.color["Fore.BLUE"]+r4.group("type")+self.color["Style.RESET_ALL"])
             else:
                 print("   Typ           ",r4.group("type"))
-        elif(printEmptyItems):
+        elif(printUndefinedValues):
             print("   Typ")
 
         # Ausleihdatum
