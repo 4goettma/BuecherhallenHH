@@ -4,7 +4,7 @@ import datetime, re, requests, sys
 class settings:
     printUndefinedValues = False
     printAccountStatus   = True
-    useColorHighlighting = False
+    useColorHighlighting = True
     showWeekday          = True
 
 if (settings.useColorHighlighting):
