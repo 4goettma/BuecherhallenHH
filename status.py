@@ -3,9 +3,10 @@ import datetime, re, requests, sys
 from colorama import Fore, Back, Style
 
 class settings:
-    printEmptyItems = False
-    printAccountStatus = True
-    showWeekday = True
+    printEmptyItems      = False
+    printAccountStatus   = True
+    useColorHighlighting = False
+    showWeekday          = True
 
 class konto:
     def __init__(self, ID, PIN):
