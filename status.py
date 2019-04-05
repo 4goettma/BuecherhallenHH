@@ -5,6 +5,7 @@ from colorama import Fore, Back, Style
 class settings:
     printEmptyItems = False
     printAccountStatus = True
+    showWeekday = True
 
 class konto:
     def __init__(self, ID, PIN):
@@ -15,6 +16,7 @@ class konto:
 
         self.renewableCounter    = 0
         self.renewableCounterMax = 0
+        self.weekdays = ["Mo, ","Di, ","Mi, ","Do, ","Fr, ","Sa, ","So, "]
 
         r1 = requests.get("https://www.buecherhallen.de/login.html")
         self.cookies = r1.cookies
@@ -106,9 +108,16 @@ class konto:
             print("   Typ")
 
         # Ausleihdatum
-        r5 = re.search("Ausgeliehen am:<\/strong><\/span> <span class=\"loans-details-value\">(?P<date>.*?)<\/span> <br> <span class=\"loans-details-label\"><strong>Standort:<\/strong><\/span> <span class=\"loans-details-value\">(?P<location>.*?)<\/span>", text)
-        print("   Ausgeliehen am",r5.group("date"),"("+r5.group("location")+")")
-
+        r5 = re.search("Ausgeliehen am:<\/strong><\/span> <span class=\"loans-details-value\">(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/span> <br> <span class=\"loans-details-label\"><strong>Standort:<\/strong><\/span> <span class=\"loans-details-value\">(?P<location>.*?)<\/span>", text)
+        
+        if(settings.showWeekday):
+            d0 = datetime.datetime(int(r5.group("dateY")), int(r5.group("dateM")), int(r5.group("dateD")))
+            weekday = self.weekdays[d0.weekday()]
+        else:
+            weekday = ""
+        
+        print("   Ausgeliehen am "+weekday+r5.group("dateDMY")+" ("+r5.group("location")+")")
+        
         # Fälligkeit
         #   heute oder vorher fällig:        rot
         #   in den nächsten 3 Tagen fällig:  gelb
@@ -119,6 +128,12 @@ class konto:
         r6 = re.search("Fällig am <strong>(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/strong>", text)
         d1 = datetime.datetime.now()
         d2 = datetime.datetime(int(r6.group("dateY")), int(r6.group("dateM")), int(r6.group("dateD")))
+
+        if(settings.showWeekday):
+            weekday = self.weekdays[d2.weekday()]
+        else:
+            weekday = ""
+
         if (((d2-d1).days+1) <= 0):
             # heute fällig
             c1 = Fore.RED
@@ -138,21 +153,21 @@ class konto:
 
         if(text.find("Keine Verlängerung möglich, Medium wurde vorgemerkt") != -1 or text.find("Medium vorgemerkt") != -1):
             # vorgemerkt
-            print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
+            print(Style.BRIGHT+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   vorgemerkt"+Style.RESET_ALL)
         elif(text.find("Keine Verlängerung möglich, Verlängerungslimit erreicht") != -1 or text.find("Zweimal verlängert") != -1 or text.find("Dreimal verlängert") != -1 or text.find("Viermal verlängert") != -1): # "Viermal" noch nicht in freier Wildbahn gesehen
             # nicht mehr verlängerbar
-            print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
+            print(Style.BRIGHT+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   nicht mehr verlängerbar"+Style.RESET_ALL)
         elif(text.find("Dieses Medium kann nicht verlängert werden") != -1 or text.find("Medium nicht verlängerbar") != -1):
             # nicht verlängerbar
-            print(Style.BRIGHT+c1+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
+            print(Style.BRIGHT+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             print(Style.BRIGHT+Fore.RED+"   nicht verlängerbar"+Style.RESET_ALL)
         elif(text.find("Heute verlängert oder ausgeliehen") != -1):
-            print(Style.BRIGHT+c2+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
-            print(Style.BRIGHT+Fore.GREEN+"   gerade verlängert ;)"+Style.RESET_ALL)
+            print(Style.BRIGHT+c2+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
+            print(Style.BRIGHT+Fore.GREEN+"   gerade verlängert oder ausgeliehen ;)"+Style.RESET_ALL)
         else:
-            print(Style.BRIGHT+c2+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
+            print(Style.BRIGHT+c2+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
             # Medium wurde als nicht nicht verlängerbar eingestuft, daher sollte es verlängerbar sein (andernfalls Fehler beim Parsen)
             self.renewableCounter += 1
 
