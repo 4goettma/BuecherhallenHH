@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import datetime, re, requests, sys
-from colorama import Fore, Back, Style
 
 class settings:
     printEmptyItems      = False
     printAccountStatus   = True
     useColorHighlighting = False
     showWeekday          = True
+
+if (settings.useColorHighlighting):
+    from colorama import Fore, Back, Style
 
 class konto:
     def __init__(self, ID, PIN):
@@ -18,13 +20,17 @@ class konto:
         self.renewableCounter    = 0
         self.renewableCounterMax = 0
         self.weekdays = ["Mo, ","Di, ","Mi, ","Do, ","Fr, ","Sa, ","So, "]
+        if (settings.useColorHighlighting):
+            self.color = {"Style.BRIGHT": Style.BRIGHT, "Style.RESET_ALL": Style.RESET_ALL, "Fore.WHITE": Fore.WHITE, "Fore.BLUE": Fore.BLUE, "Fore.GREEN": Fore.GREEN, "Fore.YELLOW": Fore.YELLOW, "Fore.RED": Fore.RED}
+        else:
+            self.color = {"Style.BRIGHT": "", "Style.RESET_ALL": "", "Fore.WHITE": "", "Fore.BLUE": "", "Fore.GREEN": "", "Fore.YELLOW": "", "Fore.RED": ""}
 
         r1 = requests.get("https://www.buecherhallen.de/login.html")
         self.cookies = r1.cookies
         self.token   = re.search("name=\"REQUEST_TOKEN\" value=\"(?P<token>.+?)\"", r1.text).group("token")
 
     def abort(self):
-        print(Style.BRIGHT+Fore.RED+" Fehler beim Parsen, bitte manuell überprüfen!"+Style.RESET_ALL)
+        print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+" Fehler beim Parsen, bitte manuell überprüfen!"+self.color["Style.RESET_ALL"])
         exit(1)
 
     def requestStatus(self):
@@ -51,7 +57,7 @@ class konto:
         entries = re.findall("<li class=\"loans-item\">(?P<name>.+?)<\/li>", text)
         
         # Kontonummer ausgeben
-        print(Style.BRIGHT+Fore.WHITE+" "+self.userid+Style.RESET_ALL)
+        print(self.color["Style.BRIGHT"]+self.color["Fore.WHITE"]+" "+self.userid+self.color["Style.RESET_ALL"])
 
         #renewableCounter(Max) initialisieren
         self.renewableCounter = 0
@@ -78,9 +84,9 @@ class konto:
             for entry in entries:
                 self.listLoan(entry)
             if(self.renewableCounter != self.renewableCounterMax):
-                print(Style.BRIGHT+Fore.RED+" Achtung:\n  Es sind vermutlich (weitere) Medien nicht verlängerbar! Bitte manuell überprüfen!"+Style.RESET_ALL)
+                print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+" Achtung:\n  Es sind vermutlich (weitere) Medien nicht verlängerbar! Bitte manuell überprüfen!"+self.color["Style.RESET_ALL"])
             if(text.find("Ihr Kundenkonto ist derzeit gesperrt.") != -1):
-                print(Style.BRIGHT+Fore.RED+" Achtung:\n  Ihr Kundenkonto ist derzeit gesperrt."+Style.RESET_ALL)
+                print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+" Achtung:\n  Ihr Kundenkonto ist derzeit gesperrt."+self.color["Style.RESET_ALL"])
 
     def listLoan(self, text):
         # Titel
@@ -89,7 +95,7 @@ class konto:
         # Mediennummer
         r2 = re.search("<span class=\"loans-details-value\">(?P<mediumId>.+?)<\/span>", text)
 
-        print(Style.BRIGHT+Fore.WHITE+" "+r1.group("title")+" ("+r2.group("mediumId")+")"+Style.RESET_ALL)
+        print(self.color["Style.BRIGHT"]+self.color["Fore.WHITE"]+" "+r1.group("title")+" ("+r2.group("mediumId")+")"+self.color["Style.RESET_ALL"])
         
         # Autor
         r3 = re.search("<p class=\"loans-author\">\ ?(?P<author>.*?)<\/p>", text)
@@ -102,7 +108,7 @@ class konto:
         r4 = re.search("<span class=\"loans-media-type-text\">(?P<type>.*?)<\/span>", text)
         if (len(re.findall("<span class=\"loans-media-type-text\">.*?<\/span>", text))):
             if (r4.group("type") in ["Bestseller", "Blu-Ray-Disk", "DVD"]):
-                print("   Typ           ",Style.BRIGHT+Fore.BLUE+r4.group("type")+Style.RESET_ALL)
+                print("   Typ           ",self.color["Style.BRIGHT"]+self.color["Fore.BLUE"]+r4.group("type")+self.color["Style.RESET_ALL"])
             else:
                 print("   Typ           ",r4.group("type"))
         elif(printEmptyItems):
@@ -137,38 +143,38 @@ class konto:
 
         if (((d2-d1).days+1) <= 0):
             # heute fällig
-            c1 = Fore.RED
-            c2 = Fore.RED
+            c1 = self.color["Fore.RED"]
+            c2 = self.color["Fore.RED"]
         elif (((d2-d1).days+1) > 7):
             # irgendwann fällig
-            c1 = Fore.YELLOW
-            c2 = Style.RESET_ALL
+            c1 = self.color["Fore.YELLOW"]
+            c2 = self.color["Style.RESET_ALL"]
         elif (((d2-d1).days+1) > 3):
             # in mehr als 3 Tagen fällig
-            c1 = Fore.YELLOW
-            c2 = Fore.GREEN
+            c1 = self.color["Fore.YELLOW"]
+            c2 = self.color["Fore.GREEN"]
         else:
             # in 1 bis 3 Tagen fällig
-            c1 = Fore.YELLOW
-            c2 = Fore.YELLOW
+            c1 = self.color["Fore.YELLOW"]
+            c2 = self.color["Fore.YELLOW"]
 
         if(text.find("Keine Verlängerung möglich, Medium wurde vorgemerkt") != -1 or text.find("Medium vorgemerkt") != -1):
             # vorgemerkt
-            print(Style.BRIGHT+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
-            print(Style.BRIGHT+Fore.RED+"   vorgemerkt"+Style.RESET_ALL)
+            print(self.color["Style.BRIGHT"]+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
+            print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+"   vorgemerkt"+self.color["Style.RESET_ALL"])
         elif(text.find("Keine Verlängerung möglich, Verlängerungslimit erreicht") != -1 or text.find("Zweimal verlängert") != -1 or text.find("Dreimal verlängert") != -1 or text.find("Viermal verlängert") != -1): # "Viermal" noch nicht in freier Wildbahn gesehen
             # nicht mehr verlängerbar
-            print(Style.BRIGHT+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
-            print(Style.BRIGHT+Fore.RED+"   nicht mehr verlängerbar"+Style.RESET_ALL)
+            print(self.color["Style.BRIGHT"]+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
+            print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+"   nicht mehr verlängerbar"+self.color["Style.RESET_ALL"])
         elif(text.find("Dieses Medium kann nicht verlängert werden") != -1 or text.find("Medium nicht verlängerbar") != -1):
             # nicht verlängerbar
-            print(Style.BRIGHT+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
-            print(Style.BRIGHT+Fore.RED+"   nicht verlängerbar"+Style.RESET_ALL)
+            print(self.color["Style.BRIGHT"]+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
+            print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+"   nicht verlängerbar"+self.color["Style.RESET_ALL"])
         elif(text.find("Heute verlängert oder ausgeliehen") != -1):
-            print(Style.BRIGHT+c2+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
-            print(Style.BRIGHT+Fore.GREEN+"   gerade verlängert oder ausgeliehen ;)"+Style.RESET_ALL)
+            print(self.color["Style.BRIGHT"]+c2+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
+            print(self.color["Style.BRIGHT"]+self.color["Fore.GREEN"]+"   gerade verlängert oder ausgeliehen ;)"+self.color["Style.RESET_ALL"])
         else:
-            print(Style.BRIGHT+c2+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
+            print(self.color["Style.BRIGHT"]+c2+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
             # Medium wurde als nicht nicht verlängerbar eingestuft, daher sollte es verlängerbar sein (andernfalls Fehler beim Parsen)
             self.renewableCounter += 1
 
