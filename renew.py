@@ -8,6 +8,7 @@ class settings:
     # requires python module "readchar" to be installed
     useReadchar = True
     skipRenewConfirm = False
+    ignoredItemCategory = ["Bestseller"]
 
 if (settings.useReadchar):
     import readchar
@@ -88,6 +89,9 @@ class konto:
         # Mediennummer
         r2 = re.search("<span class=\"loans-details-value\">(?P<mediumId>.+?)<\/span>", text)
 
+        # Medienart
+        r4 = re.search("<span class=\"loans-media-type-text\">(?P<type>.*?)<\/span>", text)
+
         r6 = re.search("Fällig am <strong>(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/strong>", text)
         d1 = datetime.datetime.now()
         d2 = datetime.datetime(int(r6.group("dateY")), int(r6.group("dateM")), int(r6.group("dateD")))
@@ -107,8 +111,13 @@ class konto:
             # in 1 bis 3 Tagen fällig
             c1 = Fore.YELLOW
             c2 = Fore.YELLOW
-
-        if(text.find("Keine Verlängerung möglich, Medium wurde vorgemerkt") != -1 or text.find("Medium vorgemerkt") != -1):
+        
+        if (len(re.findall("<span class=\"loans-media-type-text\">.*?<\/span>", text)) and r4.group("type") in settings.ignoredItemCategory):
+            # zu ignorierende Medienkategorie
+            print(Style.BRIGHT+Fore.WHITE+" "+r1.group("title")+" ("+r2.group("mediumId")+")"+Style.RESET_ALL)
+            print(Style.BRIGHT+c2+"   Fällig am      "+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+Style.RESET_ALL)
+            print("   Skipped according to configuration (ignoredItemCategory)\n")
+        elif(text.find("Keine Verlängerung möglich, Medium wurde vorgemerkt") != -1 or text.find("Medium vorgemerkt") != -1):
             # vorgemerkt
             print(Style.BRIGHT+Fore.WHITE+" "+r1.group("title")+" ("+r2.group("mediumId")+")"+Style.RESET_ALL)
             print("   nicht anwendbar\n")
