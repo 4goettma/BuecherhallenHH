@@ -50,6 +50,9 @@ class konto:
         while (text.find("  ") != -1):
             text = text.replace("  ", " ")
 
+        import clipboard
+        clipboard.copy(text)
+
         if(text.find("Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.") != -1):
             print(" Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.\n")
             abort()
@@ -67,7 +70,7 @@ class konto:
         else:
             self.renewableCounterMax = 0
 
-        r2 = re.search("<ul class=\"level_1\"> <li class=\"first\"><strong class=\"first\">Entliehene Medien <span class=\"bereichsmenue-login-count\">(?P<infoMedienanzahl>\d+)<\/span><\/strong><\/li> <li><a href=\"kontostand.html\">Kontostand <span class=\"bereichsmenue-login-count\">(?P<infoKontostand>.*?)<\/span><\/a><\/li> <li><a href=\"vormerkungen.html\">Vormerkungen <span class=\"bereichsmenue-login-count\">(?P<infoVormerkungen>\d+)<\/span><\/a><\/li> <li><a href=\"vormerkguthaben.html\">Vormerkguthaben <span class=\"bereichsmenue-login-count\">(?P<infoGuthaben>.*?)<\/span><\/a><\/li> <li class=\"last\"><a href=\"kundendaten.html\" class=\"last\">Kundendaten <span class=\"bereichsmenue-login-count\"><\/span><\/a><\/li> <\/ul>", text)
+        r2 = re.search("<ul class=\"level_1\"> <li class=\"first\"><a href=\"entliehene-medien.html\" class=\"first\">Entliehene Medien <span class=\"bereichsmenue-login-count\">(?P<infoMedienanzahl>\d+)<\/span><\/a><\/li> <li><a href=\"kontostand.html\">Kontostand <span class=\"bereichsmenue-login-count\">(?P<infoKontostand>.*?)<\/span><\/a><\/li> <li><a href=\"vormerkungen.html\">Vormerkungen <span class=\"bereichsmenue-login-count\">(?P<infoVormerkungen>\d+)<\/span><\/a><\/li> <li><a href=\"vormerkguthaben.html\">Vormerkguthaben <span class=\"bereichsmenue-login-count\">(?P<infoGuthaben>.*?)<\/span><\/a><\/li> <li class=\"last\"><a href=\"kundendaten.html\" class=\"last\">Kundendaten <span class=\"bereichsmenue-login-count\"><\/span><\/a><\/li> <\/ul>", text)
         # Wenn die Anzahl der Elemente (geparst) nicht mit der Anzahl der Medien (angegeben) übereinstimmt
         if(len(entries) != int(r2.group("infoMedienanzahl"))):
             self.abort()
