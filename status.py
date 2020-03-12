@@ -50,9 +50,6 @@ class konto:
         while (text.find("  ") != -1):
             text = text.replace("  ", " ")
 
-        import clipboard
-        clipboard.copy(text)
-
         if(text.find("Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.") != -1):
             print(" Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.\n")
             abort()
