@@ -44,30 +44,25 @@ class konto:
 
     def listLoans(self):
         text = self.requestStatus()[1]
-        replacements = [("\n",""),("\r",""),("\t",""),("&auml;","ä"),("&ouml;","ö"),("&uuml;","ü"),("&#40;","("),("&#41;",")"),("&nbsp;"," ")]
-        for i in replacements:
-            text = text.replace(i[0],i[1])
-        while (text.find("  ") != -1):
-            text = text.replace("  ", " ")
 
         if(text.find("Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.") != -1):
             print(" Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.\n")
             abort()
         
-        entries = re.findall("<li class=\"loans-item\">(?P<name>.+?)<\/li>", text)
+        entries = re.findall("<li class=\"loans-item\">(?P<name>[\S\n ]+?)<\/li>", text)
         
         # Kontonummer ausgeben
         print(self.color["Style.BRIGHT"]+self.color["Fore.WHITE"]+" "+self.userid+self.color["Style.RESET_ALL"])
 
         #renewableCounter(Max) initialisieren
         self.renewableCounter = 0
-        r1 = re.search("(?P<renewable>\d+) der (\d+) von Ihnen entliehenen Medien (kann|können) verlängert werden\.", text)
-        if (len(re.findall("(\d+) der (\d+) von Ihnen entliehenen Medien (kann|können) verlängert werden\.", text))):
+        r1 = re.search("(?P<renewable>\d+) der (\d+) von Ihnen entliehenen Medien (kann|k(&ouml;|ö)nnen) verlängert werden\.", text)
+        if (len(re.findall("(\d+) der (\d+) von Ihnen entliehenen Medien (kann|k(&ouml;|ö)nnen) verlängert werden\.", text))):
             self.renewableCounterMax = int(r1.group("renewable"))
         else:
             self.renewableCounterMax = 0
 
-        r2 = re.search("Entliehene Medien <span class=\"bereichsmenue-login-count\">(?P<infoMedienanzahl>\d+)<\/span>.*?Kontostand <span class=\"bereichsmenue-login-count\">(?P<infoKontostand>.*?)<\/span>.*?Vormerkungen <span class=\"bereichsmenue-login-count\">(?P<infoVormerkungen>\d+)<\/span>.*?Vormerkguthaben <span class=\"bereichsmenue-login-count\">(?P<infoGuthaben>.*?)<\/span>", text)
+        r2 = re.search("Entliehene Medien <span class=\"bereichsmenue-login-count\">(?P<infoMedienanzahl>\d+)<\/span>[\S\n ]*?Kontostand <span class=\"bereichsmenue-login-count\">(?P<infoKontostand>.*?)<\/span>[\S\n ]*?Vormerkungen <span class=\"bereichsmenue-login-count\">(?P<infoVormerkungen>\d+)<\/span>[\S\n ]*?Vormerkguthaben <span class=\"bereichsmenue-login-count\">(?P<infoGuthaben>.*?)<\/span>", text)
         # Wenn die Anzahl der Elemente (geparst) nicht mit der Anzahl der Medien (angegeben) übereinstimmt
         if(len(entries) != int(r2.group("infoMedienanzahl"))):
             self.abort()
@@ -115,7 +110,7 @@ class konto:
             print("   Typ")
 
         # Ausleihdatum
-        r5 = re.search("Ausgeliehen am:<\/strong><\/span> <span class=\"loans-details-value\">(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/span> <br> <span class=\"loans-details-label\"><strong>Standort:<\/strong><\/span> <span class=\"loans-details-value\">(?P<location>.*?)<\/span>", text)
+        r5 = re.search("Ausgeliehen am:<\/strong><\/span>[\S\n ]*?<span class=\"loans-details-value\">(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/span>[\S\n ]*?<br>[\S\n ]*?<span class=\"loans-details-label\"><strong>Standort:<\/strong><\/span>[\S\n ]*?<span class=\"loans-details-value\">(?P<location>.*?)<\/span>", text)
         
         if(settings.showWeekday):
             d0 = datetime.datetime(int(r5.group("dateY")), int(r5.group("dateM")), int(r5.group("dateD")))
@@ -132,7 +127,7 @@ class konto:
         #   in den nächsten 7 Tagen fällig:  grün
         #   sonstig fällig:                  unfarbig
 
-        r6 = re.search("Fällig am <strong>(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/strong>", text)
+        r6 = re.search("F(&auml;|ä)llig am <strong>(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/strong>", text)
         d1 = datetime.datetime.now()
         d2 = datetime.datetime(int(r6.group("dateY")), int(r6.group("dateM")), int(r6.group("dateD")))
 
