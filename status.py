@@ -3,9 +3,15 @@ import datetime, re, requests, sys
 
 class settings:
     printAccountStatus   = True
+    # requires python module "readchar"
+    useReadchar          = True
     useColorHighlighting = True
     showWeekday          = True
     debug                = True
+    renewWhenDaysLeft    = 3
+
+if (settings.useReadchar):
+    import readchar
 
 if (settings.useColorHighlighting):
     from colorama import Fore, Back, Style
@@ -53,9 +59,11 @@ class account:
     def listLoans(self):
         src = self.requestLoanList()['src']
 
-        if('Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.' in src):
-            print(' Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.\n')
-            self.abort()
+        errorMessages = ["Ihr Kundenkonto wurde aus Sicherheitsgründen deaktiviert. Bitte wenden Sie sich an das Bibliothekspersonal.", "Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal."]
+        for m in errorMessages:
+            if(m in src):
+                print(f' {m}\n')
+                self.abort()
 
         accountData = {
             # Anzahl entliehener Medien
@@ -191,21 +199,64 @@ class account:
         elif('<form action="/entliehene-medien.html" id="tl_renewal_action" method="post" class="loans-actions-form">' in src):
             # verlängerbar
             print(self.color['Style.BRIGHT']+c2+'   Fällig am      '+weekday+loan['expiration_date']+' ('+str((d2-d1).days+1)+' Tag(e) verbleibend)'+self.color['Style.RESET_ALL'])
+
+            if((d2-d1).days < settings.renewWhenDaysLeft and '--renew' in sys.argv):
+                if ('--no-confirm' not in sys.argv):
+                    if (settings.useReadchar):
+                        choice = ''
+                        while(choice not in ['\r','Y','y','N','n','\x03']):
+                            print(self.color['Style.BRIGHT']+self.color['Fore.WHITE']+'   verlängern? [Y/n] '+self.color['Style.RESET_ALL'], end='', flush=True)
+                            choice = readchar.readchar()
+                        print(choice)
+                        if(choice in ['\r','Y','y']):
+                            self.renewLoan(loan['id'])
+                        if(choice == '\x03'):
+                            print(self.color['Style.BRIGHT']+self.color['Fore.RED']+'\n   Abbruch...'+self.color['Style.RESET_ALL'])
+                            exit(0)
+                    else:
+                        choice = input('verlängern? [Y/n]')
+                        if(choice in ['','Y','y']):
+                            self.renewLoan(loan['id'])
+                else:
+                    self.renewLoan(loan['id'])
+            elif (settings.debug):
+                print('   Restleihdauer größer als Schwellwert (settings.renewWhenDaysLeft)')
+
         else:
-            # Fehler: kein Verlängerungsbutton vorhanden, aber kein Hinderungsgrund gefunden
+            # Fehler: kein Verlängerungsbutton vorhanden, aber kein bekannter Hinderungsgrund gefunden
             print(self.color['Style.BRIGHT']+self.color['Fore.RED']+' Achtung:\n  Es sind vermutlich (weitere) Medien nicht verlängerbar! Bitte manuell überprüfen!'+self.color['Style.RESET_ALL'])
             self.abort()
         print()
 
 
+    def renewLoan(self, id):
+        r = requests.post('https://www.buecherhallen.de/entliehene-medien.html',
+                          data   ={'FORM_SUBMIT':   'tl_renewal_action',
+                                   'REQUEST_TOKEN': self.token,
+                                   'actionType':    'renewItem',
+                                   'itemId':        id},
+                          cookies=self.cookies)
+        if (r.status_code == 200):
+            print(self.color['Fore.GREEN']+'   Verlängerung von Medium mit ID',itemId,'wahrscheinlich erfolgreich!'+self.color['Style.RESET_ALL'])
+        else:
+            print(self.color['Fore.RED']+'   Verlängerung von Medium mit ID',itemId,'fehlgeschlagen!'+self.color['Style.RESET_ALL'])
+        print('   Alle Angeben ohne Gewähr!')
+
+
 def main():
-    if (len(sys.argv) <= 1 or (len(sys.argv) == 2 and sys.argv[1] == '--help')):
+    if (len(sys.argv) <= 1 or '-h' in sys.argv or '--help' in sys.argv):
         print('Verwendung: '+sys.argv[0]+' [[Nummer der Kundenkarte] [Passwort/PIN]]\nEs können mehrere Konten mit einem Aufruf abgefragt werden, indem mehrere Zugangsdaten-Paare angegeben werden!')
+        print()
+        print('Optionen:')
+        print('  --help        Diese Gebrauchsanweisung anzeigen.')
+        print('  --renew       Bei fälligen Medien nachfragen, ob diese verlängert werden sollen.')
+        print('  --no-confirm  Automatische Verlängerung nicht vom Nutzer bestätigen lassen, für unbeaufsichtigten Einsatz gedacht.')
     else:
-        for i in range(len(sys.argv)//2):
-            id = account(sys.argv[2*i+1], sys.argv[2*i+2])
-            id.listLoans()
-            if (len(sys.argv)//2 != 1):
+        args = [a for a in sys.argv if a not in ['--renew', '--no-confirm']]
+        for i in range(len(args)//2):
+            acc = account(sys.argv[2*i+1], sys.argv[2*i+2])
+            acc.listLoans()
+            if (len(args)//2 != 1):
                 print('\n\n')
 
 
