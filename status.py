@@ -2,189 +2,212 @@
 import datetime, re, requests, sys
 
 class settings:
-    printUndefinedValues = False
     printAccountStatus   = True
     useColorHighlighting = True
     showWeekday          = True
+    debug                = True
 
 if (settings.useColorHighlighting):
     from colorama import Fore, Back, Style
 
-class konto:
+
+class account:
     def __init__(self, ID, PIN):
-        self.userid  = ID
-        self.userpw  = PIN
-        self.token   = ""
-        self.cookies = False
+        self.userid    = ID
+        self.userpw    = PIN
 
-        self.renewableCounter    = 0
-        self.renewableCounterMax = 0
-        self.weekdays = ["Mo, ","Di, ","Mi, ","Do, ","Fr, ","Sa, ","So, "]
+        self.weekdays  = ['Mo, ','Di, ','Mi, ','Do, ','Fr, ','Sa, ','So, ']
+        self.color     = {'Style.BRIGHT': '', 'Style.RESET_ALL': '', 'Fore.WHITE': '', 'Fore.BLUE': '', 'Fore.GREEN': '', 'Fore.YELLOW': '', 'Fore.RED': ''}
         if (settings.useColorHighlighting):
-            self.color = {"Style.BRIGHT": Style.BRIGHT, "Style.RESET_ALL": Style.RESET_ALL, "Fore.WHITE": Fore.WHITE, "Fore.BLUE": Fore.BLUE, "Fore.GREEN": Fore.GREEN, "Fore.YELLOW": Fore.YELLOW, "Fore.RED": Fore.RED}
-        else:
-            self.color = {"Style.BRIGHT": "", "Style.RESET_ALL": "", "Fore.WHITE": "", "Fore.BLUE": "", "Fore.GREEN": "", "Fore.YELLOW": "", "Fore.RED": ""}
+            self.color = {'Style.BRIGHT': Style.BRIGHT, 'Style.RESET_ALL': Style.RESET_ALL, 'Fore.WHITE': Fore.WHITE, 'Fore.BLUE': Fore.BLUE, 'Fore.GREEN': Fore.GREEN, 'Fore.YELLOW': Fore.YELLOW, 'Fore.RED': Fore.RED}
 
-        r1 = requests.get("https://www.buecherhallen.de/login.html")
-        self.cookies = r1.cookies
-        self.token   = re.search("name=\"REQUEST_TOKEN\" value=\"(?P<token>.+?)\"", r1.text).group("token")
+        # Session-Cookies und REQUEST_TOKEN erhalten
+        req = requests.get('https://www.buecherhallen.de/login.html')
+        self.cookies = req.cookies
+        self.token   = re.search('name=\"REQUEST_TOKEN\" value=\"(?P<token>.+?)\"', req.text).group('token')
+
 
     def abort(self):
-        print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+" Fehler beim Parsen, bitte manuell überprüfen!"+self.color["Style.RESET_ALL"])
+        print(self.color['Style.BRIGHT']+self.color['Fore.RED']+' Fehler beim Parsen!'+self.color['Style.RESET_ALL'])
         exit(1)
 
-    def requestStatus(self):
-        r1 = requests.post("https://www.buecherhallen.de/login.html",
+
+    def requestLoanList(self):
+        # Übersicht über ausgeliehene Medien abrufen (erste Seite nach Absenden des Login-Formulars)
+        req = requests.post('https://www.buecherhallen.de/login.html',
                            data   ={'FORM_SUBMIT':   'tl_login',
                                     'REQUEST_TOKEN': self.token,
                                     'username':      self.userid,
                                     'password':      self.userpw},
                            cookies=self.cookies)
-        return r1.status_code, r1.text
+
+        if(settings.debug):
+            with open(f'debug_{self.userid}_{int(datetime.datetime.now().timestamp())}.htm', 'w') as f:
+                f.write(req.text)
+            global tmp
+            tmp = req.text
+
+        return {'status': req.status_code, 'src': req.text}
+
 
     def listLoans(self):
-        text = self.requestStatus()[1]
+        src = self.requestLoanList()['src']
 
-        if(text.find("Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.") != -1):
-            print(" Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.\n")
-            abort()
-        
-        entries = re.findall("<li class=\"loans-item\">(?P<name>[\S\n ]+?)<\/li>", text)
-        
+        if('Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.' in src):
+            print(' Wir bitten um Entschuldigung, leider steht Ihr Kundenkonto aus technischen Gründen im Augenblick nicht zur Verfügung. Bitte versuchen Sie es später noch einmal.\n')
+            self.abort()
+
+        accountData = {
+            # Anzahl entliehener Medien
+            'Medienanzahl': re.search('<li class=\"odd\"><a href=\"entliehene-medien\.html\" class=\"odd\"><span class=\"navbar-submenu-account-text\">Entliehene Medien</span> <span class=\"navbar-submenu-account-count\">(.+)</span></a></li>',src).group(1),
+            # ggf. fällige Gebühren / Guthaben
+            'Kontostand': re.search('<li class=\"even\"><a href=\"kontostand.html\" class=\"even\"><span class=\"navbar-submenu-account-text\">Kontostand</span> <span class=\"navbar-submenu-account-count\">(.+) €</span></a></li>',src).group(1),
+            # Vorbestellungen / Vorbestellungen
+            'Vorbestellungen': re.search('<li class=\"odd\"><a href=\"vorbestellungen.html\" class=\"odd\"><span class=\"navbar-submenu-account-text\">Vorbestellungen</span> <span class=\"navbar-submenu-account-count\">(.+)</span></a></li>',src).group(1),
+            # Vorbestellguthaben
+            'Vorbestellguthaben': re.search('<li class=\"even\"><a href=\"vorbestellguthaben.html\" class=\"even\"><span class=\"navbar-submenu-account-text\">Vorbestellguthaben</span> <span class=\"navbar-submenu-account-count\">(.+) €</span></a></li>',src).group(1),
+        }
+
+        r = re.search('(?P<media_renewable>\d+) der (?P<media_total>\d+) von Ihnen entliehenen Medien (kann|k(&ouml;|ö)nnen) verlängert werden\.', src)
+        accountData['verlängerbar'] = r.group('media_renewable')
+
         # Kontonummer ausgeben
-        print(self.color["Style.BRIGHT"]+self.color["Fore.WHITE"]+" "+self.userid+self.color["Style.RESET_ALL"])
+        print(self.color['Style.BRIGHT']+self.color['Fore.WHITE']+' '+self.userid+self.color['Style.RESET_ALL'])
 
-        #renewableCounter(Max) initialisieren
-        self.renewableCounter = 0
-        r1 = re.search("(?P<renewable>\d+) der (\d+) von Ihnen entliehenen Medien (kann|k(&ouml;|ö)nnen) verlängert werden\.", text)
-        if (len(re.findall("(\d+) der (\d+) von Ihnen entliehenen Medien (kann|k(&ouml;|ö)nnen) verlängert werden\.", text))):
-            self.renewableCounterMax = int(r1.group("renewable"))
-        else:
-            self.renewableCounterMax = 0
+        # größerer Abschnitt, welcher später weiter geparst werden muss
+        loans = re.findall('<li class=\"search-results-item loans-search-results-item\">[\S\s]+?F(?:&auml;|ä)llig am[\S\s]+?</li>', src)
 
-        r2 = re.search("Entliehene Medien <span class=\"bereichsmenue-login-count\">(?P<infoMedienanzahl>\d+)<\/span>[\S\n ]*?Kontostand <span class=\"bereichsmenue-login-count\">(?P<infoKontostand>.*?)<\/span>[\S\n ]*?Vormerkungen <span class=\"bereichsmenue-login-count\">(?P<infoVormerkungen>\d+)<\/span>[\S\n ]*?Vormerkguthaben <span class=\"bereichsmenue-login-count\">(?P<infoGuthaben>.*?)<\/span>", text)
-        # Wenn die Anzahl der Elemente (geparst) nicht mit der Anzahl der Medien (angegeben) übereinstimmt
-        if(len(entries) != int(r2.group("infoMedienanzahl"))):
+        # Wenn die Anzahl der Medien in der Liste (geparst) nicht mit der Anzahl der Medien (angegeben) übereinstimmt
+        if(len(loans) != int(accountData['Medienanzahl'])):
             self.abort()
         else:
-            if(settings.printAccountStatus):
-                # print general information
-                l1,l2,l3 = len(r2.group("infoVormerkungen")), len(r2.group("infoGuthaben")), len(r2.group("infoKontostand"))
-                print("   Vormerkungen:   "," "*(max(l1,l2,l3)-l1-5),r2.group("infoVormerkungen"))
-                print("   Vormerkguthaben:"," "*(max(l1,l2,l3)-l2)  ,r2.group("infoGuthaben"))
-                print("   Kontostand:     "," "*(max(l1,l2,l3)-l3)  ,r2.group("infoKontostand"))
-                print("")
-                
-            print(" "+r2.group("infoMedienanzahl")+" Medien ausgeliehen:\n")
-            for entry in entries:
-                self.listLoan(entry)
-            if(self.renewableCounter != self.renewableCounterMax):
-                print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+" Achtung:\n  Es sind vermutlich (weitere) Medien nicht verlängerbar! Bitte manuell überprüfen!"+self.color["Style.RESET_ALL"])
-            if(text.find("Ihr Kundenkonto ist derzeit gesperrt.") != -1):
-                print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+" Achtung:\n  Ihr Kundenkonto ist derzeit gesperrt."+self.color["Style.RESET_ALL"])
+            if (settings.printAccountStatus):
+                l1,l2,l3 = len(accountData['Vorbestellungen']), len(accountData['Vorbestellguthaben']), len(accountData['Kontostand'])
+                print('   Vorbestellungen:      ',' '*(max(l1,l2,l3)-l1-5),accountData['Vorbestellungen'])
+                print('   Vorbestellguthaben:',' '*(max(l1,l2,l3)-l2)  ,accountData['Vorbestellguthaben'],'€')
+                print('   Kontostand:        ',' '*(max(l1,l2,l3)-l3)  ,accountData['Kontostand'],'€')
+                print()
 
-    def listLoan(self, text):
-        # Titel
-        r1 = re.search("<a href=\"suchergebnis-detail\/medium\/(?P<digitalId>.+?)\.html\">(?P<title>.+?)<\/a>", text)
+            print(' {} Medien ausgeliehen ({} verlängerbar):\n'.format(accountData['Medienanzahl'], accountData['verlängerbar']))
+            for loan in loans:
+                self.listLoan(loan)
+            if('Ihr Kundenkonto ist derzeit gesperrt.' in src):
+                print(self.color['Style.BRIGHT']+self.color['Fore.RED']+' Achtung:\n  Ihr Kundenkonto ist derzeit gesperrt.'+self.color['Style.RESET_ALL'])
 
-        # Mediennummer
-        r2 = re.search("<span class=\"loans-details-value\">(?P<mediumId>.+?)<\/span>", text)
 
-        print(self.color["Style.BRIGHT"]+self.color["Fore.WHITE"]+" "+r1.group("title")+" ("+r2.group("mediumId")+")"+self.color["Style.RESET_ALL"])
-        
+    def listLoan(self, src):
+        loan = dict()
+
+        # Titel, URL ID
+        r1 = re.search('<a href=\"suchergebnis-detail\/medium\/(?P<id_URL>.+?)\.html\">(?P<title>.+?)<\/a>', src)
+        loan['title'] = r1.group('title').replace('&amp;','&')
+        loan['id_URL'] = r1.group('id_URL')
+
+        # Medien ID
+        loan['id'] = re.search('<span class=\"loans-details-value\">(?P<id>.+?)<\/span>', src).group('id')
+
+        print(self.color['Style.BRIGHT']+self.color['Fore.WHITE']+' '+loan['title']+self.color['Style.RESET_ALL']+' ['+loan['id']+']')
+
         # Autor
-        r3 = re.search("<p class=\"loans-author\">\ ?(?P<author>.*?)<\/p>", text)
-        if (len(re.findall("<p class=\"loans-author\">.*?<\/p>", text))):
-            print("   Autor         ", r3.group("author"))
-        elif(settings.printUndefinedValues):
-            print("   Autor")
+        r3 = re.search('<p class=\"loans-author\"><a .+?>(?P<author>[\w\s,]+)<\/a><\/p>', src)
+        if r3:
+            loan['author'] = r3.group('author')
+            print('   Autor         ', loan['author'])
 
         # Medienart
-        r4 = re.search("<span class=\"loans-media-type-text\">(?P<type>.*?)<\/span>", text)
-        if (len(re.findall("<span class=\"loans-media-type-text\">.*?<\/span>", text))):
-            if (r4.group("type") in ["Bestseller", "Blu-Ray-Disk", "DVD"]):
-                print("   Typ           ",self.color["Style.BRIGHT"]+self.color["Fore.BLUE"]+r4.group("type")+self.color["Style.RESET_ALL"])
-            else:
-                print("   Typ           ",r4.group("type"))
-        elif(printUndefinedValues):
-            print("   Typ")
+        loan['type'] = re.search('<span class=\"search-results-media-type-text\">(?P<type>.*?)<\/span>', src).group('type')
+        if (loan['type'] in ['Bestseller', 'Blu-Ray-Disk', 'DVD']):
+            print('   Typ           ',self.color['Style.BRIGHT']+self.color['Fore.BLUE']+loan['type']+self.color['Style.RESET_ALL'])
+        else:
+            print('   Typ           ',loan['type'])
 
         # Ausleihdatum
-        r5 = re.search("Ausgeliehen am:<\/strong><\/span>[\S\n ]*?<span class=\"loans-details-value\">(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/span>[\S\n ]*?<br>[\S\n ]*?<span class=\"loans-details-label\"><strong>Standort:<\/strong><\/span>[\S\n ]*?<span class=\"loans-details-value\">(?P<location>.*?)<\/span>", text)
-        
+        r5 = re.search('<span class=\"loans-details-value\">(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/span>', src)
+        loan['date'] = r5.group('dateDMY')
+        loan['date_D'] = r5.group('dateD')
+        loan['date_M'] = r5.group('dateM')
+        loan['date_Y'] = r5.group('dateY')
+
+        loan['Standort_Ausleihe'] = re.search('Standort:<\/strong><\/span>[\S\s]*?<span class=\"loans-details-value\">(?P<location>.*?)<\/span>', src).group('location')
+
+        weekday = ''
         if(settings.showWeekday):
-            d0 = datetime.datetime(int(r5.group("dateY")), int(r5.group("dateM")), int(r5.group("dateD")))
-            weekday = self.weekdays[d0.weekday()]
-        else:
-            weekday = ""
-        
-        print("   Ausgeliehen am "+weekday+r5.group("dateDMY")+" ("+r5.group("location")+")")
-        
+            weekday = self.weekdays[datetime.datetime(int(loan['date_Y']), int(loan['date_M']), int(loan['date_D'])).weekday()]
+
+        print('   Ausgeliehen am '+weekday+loan['date']+' ('+loan['Standort_Ausleihe']+')')
+
         # Fälligkeit
         #   heute oder vorher fällig:        rot
         #   in den nächsten 3 Tagen fällig:  gelb
         #   beliebig fällig, unverlängerbar: gelb
         #   in den nächsten 7 Tagen fällig:  grün
-        #   sonstig fällig:                  unfarbig
+        #   sonstiges Fälligkeitsdatum:      unfarbig
 
-        r6 = re.search("F(&auml;|ä)llig am <strong>(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/strong>", text)
+        r6 = re.search('F(&auml;|ä)llig am <strong>(?P<dateDMY>(?P<dateD>\d{2})\.(?P<dateM>\d{2})\.(?P<dateY>\d{4}))<\/strong>', src)
+        loan['expiration_date'] = r6.group('dateDMY')
+        loan['expiration_date_D'] = r6.group('dateD')
+        loan['expiration_date_M'] = r6.group('dateM')
+        loan['expiration_date_Y'] = r6.group('dateY')
         d1 = datetime.datetime.now()
-        d2 = datetime.datetime(int(r6.group("dateY")), int(r6.group("dateM")), int(r6.group("dateD")))
+        d2 = datetime.datetime(int(loan['expiration_date_Y']), int(loan['expiration_date_M']), int(loan['expiration_date_D']))
 
+        weekday = ''
         if(settings.showWeekday):
             weekday = self.weekdays[d2.weekday()]
-        else:
-            weekday = ""
 
         if (((d2-d1).days+1) <= 0):
             # heute fällig
-            c1 = self.color["Fore.RED"]
-            c2 = self.color["Fore.RED"]
+            c1 = self.color['Fore.RED']
+            c2 = self.color['Fore.RED']
         elif (((d2-d1).days+1) > 7):
             # irgendwann fällig
-            c1 = self.color["Fore.YELLOW"]
-            c2 = self.color["Style.RESET_ALL"]
+            c1 = self.color['Fore.YELLOW']
+            c2 = self.color['Style.RESET_ALL']
         elif (((d2-d1).days+1) > 3):
             # in mehr als 3 Tagen fällig
-            c1 = self.color["Fore.YELLOW"]
-            c2 = self.color["Fore.GREEN"]
+            c1 = self.color['Fore.YELLOW']
+            c2 = self.color['Fore.GREEN']
         else:
             # in 1 bis 3 Tagen fällig
-            c1 = self.color["Fore.YELLOW"]
-            c2 = self.color["Fore.YELLOW"]
+            c1 = self.color['Fore.YELLOW']
+            c2 = self.color['Fore.YELLOW']
 
-        if(text.find("Keine Verlängerung möglich, Medium wurde vorgemerkt") != -1 or text.find("Medium vorgemerkt") != -1):
+        if('Keine Verlängerung möglich, Medium wurde vorgemerkt' in src or 'Medium vorgemerkt' in src):
             # vorgemerkt
-            print(self.color["Style.BRIGHT"]+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
-            print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+"   vorgemerkt"+self.color["Style.RESET_ALL"])
-        elif(text.find("Keine Verlängerung möglich, Verlängerungslimit erreicht") != -1 or text.find("Zweimal verlängert") != -1 or text.find("Dreimal verlängert") != -1 or text.find("Viermal verlängert") != -1): # "Viermal" noch nicht in freier Wildbahn gesehen
+            print(self.color['Style.BRIGHT']+c1+'   Fällig am      '+weekday+loan['expiration_date']+' ('+str((d2-d1).days+1)+' Tag(e) verbleibend)'+self.color['Style.RESET_ALL'])
+            print(self.color['Style.BRIGHT']+self.color['Fore.RED']+'   vorgemerkt'+self.color['Style.RESET_ALL'])
+        elif('Keine Verlängerung möglich, Verlängerungslimit erreicht' in src or 'Zweimal verlängert' in src or 'Dreimal verlängert' in src or 'Viermal verlängert' in src): # "Viermal verlängert" noch nicht gesehen
             # nicht mehr verlängerbar
-            print(self.color["Style.BRIGHT"]+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
-            print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+"   nicht mehr verlängerbar"+self.color["Style.RESET_ALL"])
-        elif(text.find("Dieses Medium kann nicht verlängert werden") != -1 or text.find("Medium nicht verlängerbar") != -1):
+            print(self.color['Style.BRIGHT']+c1+'   Fällig am      '+weekday+loan['expiration_date']+' ('+str((d2-d1).days+1)+' Tag(e) verbleibend)'+self.color['Style.RESET_ALL'])
+            print(self.color['Style.BRIGHT']+self.color['Fore.RED']+'   nicht mehr verlängerbar'+self.color['Style.RESET_ALL'])
+        elif('Dieses Medium kann nicht verlängert werden' in src or 'Medium nicht verlängerbar' in src):
             # nicht verlängerbar
-            print(self.color["Style.BRIGHT"]+c1+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
-            print(self.color["Style.BRIGHT"]+self.color["Fore.RED"]+"   nicht verlängerbar"+self.color["Style.RESET_ALL"])
-        elif(text.find("Heute verlängert oder ausgeliehen") != -1):
-            print(self.color["Style.BRIGHT"]+c2+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
-            print(self.color["Style.BRIGHT"]+self.color["Fore.GREEN"]+"   gerade verlängert oder ausgeliehen ;)"+self.color["Style.RESET_ALL"])
+            print(self.color['Style.BRIGHT']+c1+'   Fällig am      '+weekday+loan['expiration_date']+' ('+str((d2-d1).days+1)+' Tag(e) verbleibend)'+self.color['Style.RESET_ALL'])
+            print(self.color['Style.BRIGHT']+self.color['Fore.RED']+'   nicht verlängerbar'+self.color['Style.RESET_ALL'])
+        elif('Heute verlängert oder ausgeliehen' in src):
+            # Verlängerung nicht notwendig
+            print(self.color['Style.BRIGHT']+c2+'   Fällig am      '+weekday+loan['expiration_date']+' ('+str((d2-d1).days+1)+' Tag(e) verbleibend)'+self.color['Style.RESET_ALL'])
+            print(self.color['Style.BRIGHT']+self.color['Fore.GREEN']+'   gerade verlängert oder ausgeliehen'+self.color['Style.RESET_ALL'])
+        elif('<form action="/entliehene-medien.html" id="tl_renewal_action" method="post" class="loans-actions-form">' in src):
+            # verlängerbar
+            print(self.color['Style.BRIGHT']+c2+'   Fällig am      '+weekday+loan['expiration_date']+' ('+str((d2-d1).days+1)+' Tag(e) verbleibend)'+self.color['Style.RESET_ALL'])
         else:
-            print(self.color["Style.BRIGHT"]+c2+"   Fällig am      "+weekday+r6.group("dateDMY")+" ("+str((d2-d1).days+1)+" Tag(e) verbleibend)"+self.color["Style.RESET_ALL"])
-            # Medium wurde als nicht nicht verlängerbar eingestuft, daher sollte es verlängerbar sein (andernfalls Fehler beim Parsen)
-            self.renewableCounter += 1
+            # Fehler: kein Verlängerungsbutton vorhanden, aber kein Hinderungsgrund gefunden
+            print(self.color['Style.BRIGHT']+self.color['Fore.RED']+' Achtung:\n  Es sind vermutlich (weitere) Medien nicht verlängerbar! Bitte manuell überprüfen!'+self.color['Style.RESET_ALL'])
+            self.abort()
+        print()
 
-        print("")
 
 def main():
-    if (len(sys.argv) <= 1 or (len(sys.argv) == 2 and sys.argv[1] == "--help")):
-        print("usage: "+sys.argv[0]+" [[Nummer der Kundenkarte] [Passwort/PIN]]\nEs können mehrere Konten mit einem Aufruf abgefragt werden, indem mehrere Zugangsdaten-Paare angegeben werden!")
+    if (len(sys.argv) <= 1 or (len(sys.argv) == 2 and sys.argv[1] == '--help')):
+        print('Verwendung: '+sys.argv[0]+' [[Nummer der Kundenkarte] [Passwort/PIN]]\nEs können mehrere Konten mit einem Aufruf abgefragt werden, indem mehrere Zugangsdaten-Paare angegeben werden!')
     else:
         for i in range(len(sys.argv)//2):
-            id = konto(sys.argv[2*i+1], sys.argv[2*i+2])
+            id = account(sys.argv[2*i+1], sys.argv[2*i+2])
             id.listLoans()
             if (len(sys.argv)//2 != 1):
-                print("\n\n")
+                print('\n\n')
 
-if __name__ == "__main__":
-    # execute only if run as a script
+
+if (__name__ == '__main__'):
     main()
