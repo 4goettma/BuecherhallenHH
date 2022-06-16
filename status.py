@@ -7,7 +7,7 @@ class settings:
     useReadchar          = True
     useColorHighlighting = True
     showWeekday          = True
-    debug                = True
+    debug                = False
     renewWhenDaysLeft    = 3
 
 if (settings.useReadchar):
